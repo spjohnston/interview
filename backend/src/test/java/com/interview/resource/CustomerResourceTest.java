@@ -2,12 +2,25 @@ package com.interview.resource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interview.dto.CustomerRequest;
+import com.interview.dto.CustomerResponse;
+import com.interview.exception.ResourceNotFoundException;
+import com.interview.service.CustomerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,12 +40,24 @@ class CustomerResourceTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private CustomerService customerService;
+
     @Test
     void testPost_Success() throws Exception {
+        when(customerService.create(any())).thenReturn(sampleResponse());
+
         mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest())))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.phone").value("555-1234"))
+                .andExpect(jsonPath("$.email").value("jane@example.com"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.modifiedAt").exists());
     }
 
     @Test
@@ -74,22 +99,63 @@ class CustomerResourceTest {
 
     @Test
     void testGetById_Success() throws Exception {
-        mockMvc.perform(get("/api/customers/1"))
-                .andExpect(status().isOk());
+        when(customerService.findById(42L)).thenReturn(sampleResponse());
+
+        mockMvc.perform(get("/api/customers/42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.email").value("jane@example.com"))
+                .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void testGetById_NotFound() throws Exception {
+        when(customerService.findById(99L))
+                .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
+
+        mockMvc.perform(get("/api/customers/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Customer not found: 99"));
     }
 
     @Test
     void testGetList_Success() throws Exception {
+        when(customerService.findAll()).thenReturn(Collections.singletonList(sampleResponse()));
+
         mockMvc.perform(get("/api/customers"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(42))
+                .andExpect(jsonPath("$[0].firstName").value("Jane"))
+                .andExpect(jsonPath("$[0].email").value("jane@example.com"));
     }
 
     @Test
     void testPut_Success() throws Exception {
-        mockMvc.perform(put("/api/customers/1")
+        when(customerService.update(eq(42L), any())).thenReturn(sampleResponse());
+
+        mockMvc.perform(put("/api/customers/42")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.email").value("jane@example.com"))
+                .andExpect(jsonPath("$.modifiedAt").exists());
+    }
+
+    @Test
+    void testPut_NotFound() throws Exception {
+        when(customerService.update(eq(99L), any()))
+                .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
+
+        mockMvc.perform(put("/api/customers/99")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validRequest())))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -105,8 +171,21 @@ class CustomerResourceTest {
 
     @Test
     void testDelete_Success() throws Exception {
+        doNothing().when(customerService).delete(1L);
+
         mockMvc.perform(delete("/api/customers/1"))
                 .andExpect(status().isNoContent());
+
+        verify(customerService).delete(1L);
+    }
+
+    @Test
+    void testDelete_NotFound() throws Exception {
+        doThrow(new ResourceNotFoundException("Customer not found: 99"))
+                .when(customerService).delete(99L);
+
+        mockMvc.perform(delete("/api/customers/99"))
+                .andExpect(status().isNotFound());
     }
 
     private static CustomerRequest validRequest() {
@@ -116,5 +195,17 @@ class CustomerResourceTest {
         request.setPhone("555-1234");
         request.setEmail("jane@example.com");
         return request;
+    }
+
+    private static CustomerResponse sampleResponse() {
+        CustomerResponse response = new CustomerResponse();
+        response.setId(42L);
+        response.setFirstName("Jane");
+        response.setLastName("Doe");
+        response.setPhone("555-1234");
+        response.setEmail("jane@example.com");
+        response.setCreatedAt(LocalDateTime.of(2026, 4, 23, 10, 30));
+        response.setModifiedAt(LocalDateTime.of(2026, 4, 23, 10, 30));
+        return response;
     }
 }
