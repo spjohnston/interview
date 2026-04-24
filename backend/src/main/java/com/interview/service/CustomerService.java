@@ -1,16 +1,22 @@
 package com.interview.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.entity.Customer;
 import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.repository.CustomerRepository;
+import com.interview.repository.CustomerSpecifications;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +27,15 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class CustomerService {
+
+    private static final Set<String> SORTABLE_FIELDS = Set.of(
+            "lastName", "firstName", "createdAt", "modifiedAt");
+
+    private static final Sort DEFAULT_SORT = Sort.by(
+            Sort.Order.asc("lastName"),
+            Sort.Order.asc("firstName"));
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final CustomerRepository customerRepository;
 
@@ -43,10 +58,31 @@ public class CustomerService {
         return CustomerResponse.fromEntity(customer);
     }
 
-    public List<CustomerResponse> findAll() {
-        return customerRepository.findAll().stream()
-                .map(CustomerResponse::fromEntity)
-                .collect(Collectors.toList());
+    public Page<CustomerResponse> findAll(CustomerCriteria criteria) {
+        Specification<Customer> spec = Specification
+                .where(CustomerSpecifications.hasSearchTerm(criteria.getSearch()))
+                .and(CustomerSpecifications.hasStatus(criteria.getStatus()));
+
+        int page = criteria.getPage() != null ? criteria.getPage() : 0;
+        int size = criteria.getSize() != null ? criteria.getSize() : DEFAULT_PAGE_SIZE;
+        Pageable pageable = PageRequest.of(page, size, resolveSort(criteria));
+
+        return customerRepository.findAll(spec, pageable).map(CustomerResponse::fromEntity);
+    }
+
+    private Sort resolveSort(CustomerCriteria criteria) {
+        if (criteria.getSortBy() == null || criteria.getSortBy().trim().isEmpty()) {
+            return DEFAULT_SORT;
+        }
+        if (!SORTABLE_FIELDS.contains(criteria.getSortBy())) {
+            throw new IllegalArgumentException(
+                    "Invalid sort field: " + criteria.getSortBy()
+                            + ". Allowed values: " + SORTABLE_FIELDS);
+        }
+        Sort.Direction direction = criteria.getSortDirection() == null
+                ? Sort.Direction.ASC
+                : Sort.Direction.fromString(criteria.getSortDirection());
+        return Sort.by(direction, criteria.getSortBy());
     }
 
     public CustomerResponse update(Long id, CustomerRequest request) {

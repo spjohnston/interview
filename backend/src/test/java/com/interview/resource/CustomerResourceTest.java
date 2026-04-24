@@ -1,6 +1,7 @@
 package com.interview.resource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.dto.CustomerStatusRequest;
@@ -11,6 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -126,14 +130,64 @@ class CustomerResourceTest {
 
     @Test
     void testGetList_Success() throws Exception {
-        when(customerService.findAll()).thenReturn(Collections.singletonList(sampleResponse()));
+        Page<CustomerResponse> page = new PageImpl<>(
+                Collections.singletonList(sampleResponse()),
+                PageRequest.of(0, 20),
+                1);
+        when(customerService.findAll(any(CustomerCriteria.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(42))
-                .andExpect(jsonPath("$[0].firstName").value("Jane"))
-                .andExpect(jsonPath("$[0].email").value("jane@example.com"));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(42))
+                .andExpect(jsonPath("$.content[0].firstName").value("Jane"))
+                .andExpect(jsonPath("$.content[0].email").value("jane@example.com"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void testGetList_Paged() throws Exception {
+        Page<CustomerResponse> page = new PageImpl<>(
+                Collections.singletonList(sampleResponse()),
+                PageRequest.of(0, 10),
+                1);
+        when(customerService.findAll(any(CustomerCriteria.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/customers?page=0&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void testGetList_FilterByStatus() throws Exception {
+        Page<CustomerResponse> page = new PageImpl<>(
+                Collections.singletonList(sampleResponse()),
+                PageRequest.of(0, 20),
+                1);
+        when(customerService.findAll(any(CustomerCriteria.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/customers?status=INACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1));
+    }
+
+    @Test
+    void testGetList_InvalidStatusFailure() throws Exception {
+        mockMvc.perform(get("/api/customers?status=DELETED"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetList_InvalidSortValidationFailure() throws Exception {
+        when(customerService.findAll(any(CustomerCriteria.class)))
+                .thenThrow(new IllegalArgumentException("Invalid sort field: bogus"));
+
+        mockMvc.perform(get("/api/customers?sortBy=bogus"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid sort field: bogus"));
     }
 
     @Test

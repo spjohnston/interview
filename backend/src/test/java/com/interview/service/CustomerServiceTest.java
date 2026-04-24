@@ -1,5 +1,6 @@
 package com.interview.service;
 
+import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.entity.Customer;
@@ -10,7 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -19,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -78,13 +86,57 @@ class CustomerServiceTest {
         Customer b = sampleCustomer();
         b.setId(43L);
         b.setEmail("other@example.com");
-        when(customerRepository.findAll()).thenReturn(Arrays.asList(a, b));
+        when(customerRepository.findAll(Mockito.<Specification<Customer>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Arrays.asList(a, b)));
 
-        List<CustomerResponse> result = customerService.findAll();
+        Page<CustomerResponse> result = customerService.findAll(new CustomerCriteria());
 
-        assertEquals(2, result.size());
-        assertEquals(42L, result.get(0).getId());
-        assertEquals(43L, result.get(1).getId());
+        assertEquals(2, result.getContent().size());
+        assertEquals(42L, result.getContent().get(0).getId());
+        assertEquals(43L, result.getContent().get(1).getId());
+    }
+
+    @Test
+    void testFindAll_SearchPassesSpecification() {
+        when(customerRepository.findAll(Mockito.<Specification<Customer>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleCustomer())));
+
+        CustomerCriteria criteria = CustomerCriteria.builder().search("doe").build();
+        Page<CustomerResponse> result = customerService.findAll(criteria);
+
+        assertEquals(1, result.getContent().size());
+    }
+
+    @Test
+    void testFindAll_Paged() {
+        when(customerRepository.findAll(Mockito.<Specification<Customer>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleCustomer())));
+
+        CustomerCriteria criteria = CustomerCriteria.builder().page(0).size(10).build();
+        Page<CustomerResponse> result = customerService.findAll(criteria);
+
+        assertEquals(1, result.getContent().size());
+        assertEquals(42L, result.getContent().get(0).getId());
+    }
+
+    @Test
+    void testFindAll_FilterByStatus() {
+        when(customerRepository.findAll(Mockito.<Specification<Customer>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleCustomer())));
+
+        CustomerCriteria criteria = CustomerCriteria.builder().status(CustomerStatus.INACTIVE).build();
+        Page<CustomerResponse> result = customerService.findAll(criteria);
+
+        assertEquals(1, result.getContent().size());
+    }
+
+    @Test
+    void testFindAll_InvalidSortValidationFailure() {
+        CustomerCriteria criteria = CustomerCriteria.builder().sortBy("bogus").build();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> customerService.findAll(criteria));
+        assertTrue(ex.getMessage().contains("bogus"));
     }
 
     @Test
