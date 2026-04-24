@@ -3,6 +3,7 @@ package com.interview.dto;
 import java.time.LocalDateTime;
 
 import com.interview.entity.Customer;
+import com.interview.entity.CustomerStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,12 +26,13 @@ public class CustomerResponse {
     private String email;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
+    private CustomerStatus status;
 
     /**
      * Helper method to build a response payload from the supplied {@link Customer} entity.
-     * 
+     *
      * @param customer the {@link Customer} to build the payload from
-     * @return the corresponding response 
+     * @return the corresponding response
      */
     public static CustomerResponse fromEntity(Customer customer) {
         return CustomerResponse.builder()
@@ -41,6 +43,7 @@ public class CustomerResponse {
                 .email(customer.getEmail())
                 .createdAt(customer.getCreatedAt())
                 .modifiedAt(customer.getModifiedAt())
+                .status(customer.getStatus())
                 .build();
     }
 }

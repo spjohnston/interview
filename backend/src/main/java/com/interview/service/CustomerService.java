@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.entity.Customer;
+import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.repository.CustomerRepository;
 
@@ -58,6 +59,17 @@ public class CustomerService {
         // save the updates and then convert/return a customer response
         Customer saved = customerRepository.save(customer);
         log.info("Updated customer {}", saved.getId());
+
+        return CustomerResponse.fromEntity(saved);
+    }
+
+    public CustomerResponse updateStatus(Long id, CustomerStatus newStatus) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + id));
+
+        customer.setStatus(newStatus);
+        Customer saved = customerRepository.save(customer);
+        log.info("Updated customer {} status to {}", saved.getId(), newStatus);
 
         return CustomerResponse.fromEntity(saved);
     }

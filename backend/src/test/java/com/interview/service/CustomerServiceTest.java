@@ -3,6 +3,7 @@ package com.interview.service;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.entity.Customer;
+import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.repository.CustomerRepository;
 import org.junit.jupiter.api.Test;
@@ -108,6 +109,25 @@ class CustomerServiceTest {
     }
 
     @Test
+    void testUpdateStatus_Success() {
+        Customer existing = sampleCustomer();
+        when(customerRepository.findById(42L)).thenReturn(Optional.of(existing));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerResponse response = customerService.updateStatus(42L, CustomerStatus.INACTIVE);
+
+        assertEquals(CustomerStatus.INACTIVE, response.getStatus());
+    }
+
+    @Test
+    void testUpdateStatus_NotFound() {
+        when(customerRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> customerService.updateStatus(99L, CustomerStatus.INACTIVE));
+    }
+
+    @Test
     void testDelete_Success() {
         when(customerRepository.existsById(42L)).thenReturn(true);
 
@@ -141,6 +161,7 @@ class CustomerServiceTest {
                 .lastName("Doe")
                 .phone("555-1234")
                 .email("jane@example.com")
+                .status(CustomerStatus.ACTIVE)
                 .createdAt(now)
                 .modifiedAt(now)
                 .build();

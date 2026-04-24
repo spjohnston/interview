@@ -7,3 +7,5 @@ CREATE TABLE IF NOT EXISTS customer (
     created_at TIMESTAMP           NOT NULL,
     modified_at TIMESTAMP          NOT NULL
 );
+
+ALTER TABLE customer ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE';

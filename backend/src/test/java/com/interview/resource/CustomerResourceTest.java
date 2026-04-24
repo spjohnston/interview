@@ -3,6 +3,8 @@ package com.interview.resource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
+import com.interview.dto.CustomerStatusRequest;
+import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.service.CustomerService;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -170,6 +173,48 @@ class CustomerResourceTest {
     }
 
     @Test
+    void testPatchStatus_Success() throws Exception {
+        CustomerResponse updated = sampleResponse();
+        updated.setStatus(CustomerStatus.INACTIVE);
+        when(customerService.updateStatus(42L, CustomerStatus.INACTIVE)).thenReturn(updated);
+
+        CustomerStatusRequest request = CustomerStatusRequest.builder()
+                .status(CustomerStatus.INACTIVE)
+                .build();
+
+        mockMvc.perform(patch("/api/customers/42/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @Test
+    void testPatchStatus_NotFound() throws Exception {
+        when(customerService.updateStatus(eq(99L), any()))
+                .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
+
+        CustomerStatusRequest request = CustomerStatusRequest.builder()
+                .status(CustomerStatus.INACTIVE)
+                .build();
+
+        mockMvc.perform(patch("/api/customers/99/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testPatchStatus_MissingStatusValidationFailure() throws Exception {
+        mockMvc.perform(patch("/api/customers/42/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.status").exists());
+    }
+
+    @Test
     void testDelete_Success() throws Exception {
         doNothing().when(customerService).delete(1L);
 
@@ -205,6 +250,7 @@ class CustomerResourceTest {
                 .lastName("Doe")
                 .phone("555-1234")
                 .email("jane@example.com")
+                .status(CustomerStatus.ACTIVE)
                 .createdAt(now)
                 .modifiedAt(now)
                 .build();
