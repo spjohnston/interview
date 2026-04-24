@@ -19,7 +19,10 @@ import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.dto.CustomerStatusRequest;
+import com.interview.dto.VehicleResponse;
 import com.interview.service.CustomerService;
+
+import java.util.List;
 
 /**
  * REST controller exposing CRUD endpoints for customers under {@code /api/customers}.
@@ -44,6 +47,11 @@ public class CustomerResource {
     @GetMapping("/{id}")
     public ResponseEntity<CustomerResponse> get(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.findById(id));
+    }
+
+    @GetMapping("/{id}/vehicles")
+    public ResponseEntity<List<VehicleResponse>> listVehicles(@PathVariable Long id) {
+        return ResponseEntity.ok(customerService.findVehiclesForCustomer(id));
     }
 
     @GetMapping

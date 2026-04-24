@@ -5,9 +5,12 @@ import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.dto.CustomerStatusRequest;
+import com.interview.dto.VehicleResponse;
 import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.service.CustomerService;
+
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -115,6 +118,36 @@ class CustomerResourceTest {
                 .andExpect(jsonPath("$.lastName").value("Doe"))
                 .andExpect(jsonPath("$.email").value("jane@example.com"))
                 .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void testGetVehicles_Success() throws Exception {
+        VehicleResponse v = VehicleResponse.builder()
+                .id(1L)
+                .vin("1HGBH41JXMN000001")
+                .make("Honda")
+                .model("Civic")
+                .year(2020)
+                .customerId(42L)
+                .active(true)
+                .build();
+        when(customerService.findVehiclesForCustomer(42L)).thenReturn(List.of(v));
+
+        mockMvc.perform(get("/api/customers/42/vehicles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].vin").value("1HGBH41JXMN000001"))
+                .andExpect(jsonPath("$[0].customerId").value(42))
+                .andExpect(jsonPath("$[0].make").value("Honda"));
+    }
+
+    @Test
+    void testGetVehicles_CustomerNotFound() throws Exception {
+        when(customerService.findVehiclesForCustomer(99L))
+                .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
+
+        mockMvc.perform(get("/api/customers/99/vehicles"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

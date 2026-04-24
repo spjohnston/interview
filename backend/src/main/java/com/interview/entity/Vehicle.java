@@ -6,24 +6,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * JPA entity representing a customer.
+ * JPA entity representing a vehicle owned by a {@link Customer}.
  */
 @Entity
 @Getter
@@ -31,23 +27,27 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Customer {
+public class Vehicle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String firstName;
+    @Column(nullable = false, unique = true, length = 17)
+    private String vin;
 
-    @Column(nullable = false, length = 100)
-    private String lastName;
+    @Column(nullable = false, length = 50)
+    private String make;
 
-    @Column(length = 20)
-    private String phone;
+    @Column(nullable = false, length = 50)
+    private String model;
 
-    @Column(nullable = false, length = 255)
-    private String email;
+    @Column(nullable = false)
+    private Integer year;
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -55,15 +55,9 @@ public class Customer {
     @Column(nullable = false)
     private LocalDateTime modifiedAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false)
     @Builder.Default
-    private CustomerStatus status = CustomerStatus.ACTIVE;
-
-    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Vehicle> vehicles = new ArrayList<>();
+    private boolean active = true;
 
     @PrePersist
     void onCreate() {
