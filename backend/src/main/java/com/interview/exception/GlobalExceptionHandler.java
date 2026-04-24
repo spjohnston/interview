@@ -10,14 +10,19 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Translates common web-layer exceptions into consistent {@link ErrorResponse} bodies.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
+        log.debug("Resource not found: {}", ex.getMessage());
+
         ErrorResponse body = ErrorResponse.builder()
                 .status(HttpStatus.NOT_FOUND.value())
                 .message(ex.getMessage())
@@ -32,6 +37,8 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(err ->
                 fieldErrors.put(err.getField(), err.getDefaultMessage()));
 
+        log.debug("Validation failed: {}", fieldErrors);
+
         ErrorResponse body = ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .message("Validation failed")
@@ -43,11 +50,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        log.debug("Malformed JSON request: {}", ex.getMessage());
+
         ErrorResponse body = ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .message("Malformed JSON request")
                 .build();
-                
+
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        log.error("Unhandled exception", ex);
+
+        ErrorResponse body = ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message("Internal server error")
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
