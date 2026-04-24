@@ -19,8 +19,10 @@ import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
 import com.interview.dto.CustomerStatusRequest;
+import com.interview.dto.VehicleRequest;
 import com.interview.dto.VehicleResponse;
 import com.interview.service.CustomerService;
+import com.interview.service.VehicleService;
 
 import java.util.List;
 
@@ -32,9 +34,11 @@ import java.util.List;
 public class CustomerResource {
 
     private final CustomerService customerService;
+    private final VehicleService vehicleService;
 
-    public CustomerResource(CustomerService customerService) {
+    public CustomerResource(CustomerService customerService, VehicleService vehicleService) {
         this.customerService = customerService;
+        this.vehicleService = vehicleService;
     }
 
     @PostMapping
@@ -51,7 +55,15 @@ public class CustomerResource {
 
     @GetMapping("/{id}/vehicles")
     public ResponseEntity<List<VehicleResponse>> listVehicles(@PathVariable Long id) {
-        return ResponseEntity.ok(customerService.findVehiclesForCustomer(id));
+        return ResponseEntity.ok(vehicleService.findByCustomerId(id));
+    }
+
+    @PostMapping("/{id}/vehicles")
+    public ResponseEntity<VehicleResponse> createVehicle(@PathVariable Long id,
+                                                         @Valid @RequestBody VehicleRequest request) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(vehicleService.create(id, request));
     }
 
     @GetMapping

@@ -12,5 +12,5 @@ import java.util.List;
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
-    List<Vehicle> findByCustomerIdOrderByYearDesc(Long customerId);
+    List<Vehicle> findByCustomerIdAndActiveTrueOrderByYearDesc(Long customerId);
 }

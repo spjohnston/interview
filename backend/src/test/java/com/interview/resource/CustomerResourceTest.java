@@ -1,29 +1,5 @@
 package com.interview.resource;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.interview.dto.CustomerCriteria;
-import com.interview.dto.CustomerRequest;
-import com.interview.dto.CustomerResponse;
-import com.interview.dto.CustomerStatusRequest;
-import com.interview.dto.VehicleResponse;
-import com.interview.entity.CustomerStatus;
-import com.interview.exception.ResourceNotFoundException;
-import com.interview.service.CustomerService;
-
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -37,6 +13,32 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.interview.dto.CustomerCriteria;
+import com.interview.dto.CustomerRequest;
+import com.interview.dto.CustomerResponse;
+import com.interview.dto.CustomerStatusRequest;
+import com.interview.dto.VehicleRequest;
+import com.interview.dto.VehicleResponse;
+import com.interview.entity.CustomerStatus;
+import com.interview.exception.ResourceNotFoundException;
+import com.interview.service.CustomerService;
+import com.interview.service.VehicleService;
 
 /**
  * Tests for {@link CustomerResource}.
@@ -52,6 +54,9 @@ class CustomerResourceTest {
 
     @MockBean
     private CustomerService customerService;
+
+    @MockBean
+    private VehicleService vehicleService;
 
     @Test
     void testPost_Success() throws Exception {
@@ -131,7 +136,7 @@ class CustomerResourceTest {
                 .customerId(42L)
                 .active(true)
                 .build();
-        when(customerService.findVehiclesForCustomer(42L)).thenReturn(List.of(v));
+        when(vehicleService.findByCustomerId(42L)).thenReturn(List.of(v));
 
         mockMvc.perform(get("/api/customers/42/vehicles"))
                 .andExpect(status().isOk())
@@ -143,11 +148,68 @@ class CustomerResourceTest {
 
     @Test
     void testGetVehicles_CustomerNotFound() throws Exception {
-        when(customerService.findVehiclesForCustomer(99L))
+        when(vehicleService.findByCustomerId(99L))
                 .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
 
         mockMvc.perform(get("/api/customers/99/vehicles"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testPostVehicle_Success() throws Exception {
+        VehicleResponse created = VehicleResponse.builder()
+                .id(7L)
+                .vin("1HGBH41JXMN000001")
+                .make("Honda")
+                .model("Civic")
+                .year(2020)
+                .customerId(42L)
+                .active(true)
+                .build();
+        when(vehicleService.create(eq(42L), any())).thenReturn(created);
+
+        mockMvc.perform(post("/api/customers/42/vehicles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validVehicleRequest())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.customerId").value(42));
+    }
+
+    @Test
+    void testPostVehicle_ValidationFailure() throws Exception {
+        VehicleRequest request = VehicleRequest.builder()
+                .vin("too-short")
+                .make("Honda")
+                .model("Civic")
+                .year(2020)
+                .build();
+
+        mockMvc.perform(post("/api/customers/42/vehicles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.vin").exists());
+    }
+
+    @Test
+    void testPostVehicle_CustomerNotFound() throws Exception {
+        when(vehicleService.create(eq(99L), any()))
+                .thenThrow(new ResourceNotFoundException("Customer not found: 99"));
+
+        mockMvc.perform(post("/api/customers/99/vehicles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validVehicleRequest())))
+                .andExpect(status().isNotFound());
+    }
+
+    private static VehicleRequest validVehicleRequest() {
+        return VehicleRequest.builder()
+                .vin("1HGBH41JXMN000001")
+                .make("Honda")
+                .model("Civic")
+                .year(2020)
+                .build();
     }
 
     @Test

@@ -3,13 +3,10 @@ package com.interview.service;
 import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
-import com.interview.dto.VehicleResponse;
 import com.interview.entity.Customer;
 import com.interview.entity.CustomerStatus;
-import com.interview.entity.Vehicle;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.repository.CustomerRepository;
-import com.interview.repository.VehicleRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,9 +39,6 @@ class CustomerServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
-
-    @Mock
-    private VehicleRepository vehicleRepository;
 
     @InjectMocks
     private CustomerService customerService;
@@ -199,42 +193,6 @@ class CustomerServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> customerService.delete(99L));
         verify(customerRepository, never()).deleteById(any());
-    }
-
-    @Test
-    void testFindVehiclesForCustomer_Success() {
-        when(customerRepository.existsById(42L)).thenReturn(true);
-        Vehicle v1 = sampleVehicle();
-        Vehicle v2 = sampleVehicle();
-        v2.setId(2L);
-        v2.setVin("1HGBH41JXMN000002");
-        when(vehicleRepository.findByCustomerIdOrderByYearDesc(42L))
-                .thenReturn(List.of(v1, v2));
-
-        List<VehicleResponse> result = customerService.findVehiclesForCustomer(42L);
-
-        assertEquals(2, result.size());
-        assertEquals("1HGBH41JXMN000001", result.get(0).getVin());
-        assertEquals(42L, result.get(0).getCustomerId());
-    }
-
-    @Test
-    void testFindVehiclesForCustomer_CustomerNotFound() {
-        when(customerRepository.existsById(99L)).thenReturn(false);
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> customerService.findVehiclesForCustomer(99L));
-    }
-
-    private static Vehicle sampleVehicle() {
-        return Vehicle.builder()
-                .id(1L)
-                .vin("1HGBH41JXMN000001")
-                .make("Honda")
-                .model("Civic")
-                .year(2020)
-                .customer(sampleCustomer())
-                .build();
     }
 
     private static CustomerRequest sampleRequest() {

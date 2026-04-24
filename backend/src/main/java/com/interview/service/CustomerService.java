@@ -12,16 +12,11 @@ import org.springframework.stereotype.Service;
 import com.interview.dto.CustomerCriteria;
 import com.interview.dto.CustomerRequest;
 import com.interview.dto.CustomerResponse;
-import com.interview.dto.VehicleResponse;
 import com.interview.entity.Customer;
 import com.interview.entity.CustomerStatus;
 import com.interview.exception.ResourceNotFoundException;
 import com.interview.repository.CustomerRepository;
 import com.interview.repository.CustomerSpecifications;
-import com.interview.repository.VehicleRepository;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,12 +38,9 @@ public class CustomerService {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final CustomerRepository customerRepository;
-    private final VehicleRepository vehicleRepository;
 
-    public CustomerService(CustomerRepository customerRepository,
-                           VehicleRepository vehicleRepository) {
+    public CustomerService(CustomerRepository customerRepository) {
         this.customerRepository = customerRepository;
-        this.vehicleRepository = vehicleRepository;
     }
 
     public CustomerResponse create(CustomerRequest request) {
@@ -125,15 +117,5 @@ public class CustomerService {
 
         customerRepository.deleteById(id);
         log.info("Deleted customer {}", id);
-    }
-
-    public List<VehicleResponse> findVehiclesForCustomer(Long customerId) {
-        if (!customerRepository.existsById(customerId)) {
-            throw new ResourceNotFoundException("Customer not found: " + customerId);
-        }
-
-        return vehicleRepository.findByCustomerIdOrderByYearDesc(customerId).stream()
-                .map(VehicleResponse::fromEntity)
-                .collect(Collectors.toList());
     }
 }
