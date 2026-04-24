@@ -1,5 +1,10 @@
 package com.interview.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
@@ -7,6 +12,10 @@ import javax.validation.constraints.Size;
 /**
  * Inbound payload for creating or updating a customer.
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CustomerRequest {
 
     @NotBlank
@@ -24,36 +33,4 @@ public class CustomerRequest {
     @Email
     @Size(max = 255)
     private String email;
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 }

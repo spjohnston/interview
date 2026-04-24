@@ -1,6 +1,10 @@
 package com.interview.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
@@ -8,42 +12,13 @@ import java.util.Map;
  * Structured error payload returned by the API when a request fails.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ErrorResponse {
 
     private int status;
     private String message;
     private Map<String, String> fieldErrors;
-
-    public ErrorResponse() {
-    }
-
-    public ErrorResponse(int status, String message, Map<String, String> fieldErrors) {
-        this.status = status;
-        this.message = message;
-        this.fieldErrors = fieldErrors;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public Map<String, String> getFieldErrors() {
-        return fieldErrors;
-    }
-
-    public void setFieldErrors(Map<String, String> fieldErrors) {
-        this.fieldErrors = fieldErrors;
-    }
 }

@@ -189,23 +189,24 @@ class CustomerResourceTest {
     }
 
     private static CustomerRequest validRequest() {
-        CustomerRequest request = new CustomerRequest();
-        request.setFirstName("Jane");
-        request.setLastName("Doe");
-        request.setPhone("555-1234");
-        request.setEmail("jane@example.com");
-        return request;
+        return CustomerRequest.builder()
+                .firstName("Jane")
+                .lastName("Doe")
+                .phone("555-1234")
+                .email("jane@example.com")
+                .build();
     }
 
     private static CustomerResponse sampleResponse() {
-        CustomerResponse response = new CustomerResponse();
-        response.setId(42L);
-        response.setFirstName("Jane");
-        response.setLastName("Doe");
-        response.setPhone("555-1234");
-        response.setEmail("jane@example.com");
-        response.setCreatedAt(LocalDateTime.of(2026, 4, 23, 10, 30));
-        response.setModifiedAt(LocalDateTime.of(2026, 4, 23, 10, 30));
-        return response;
+        LocalDateTime now = LocalDateTime.of(2026, 4, 23, 10, 30);
+        return CustomerResponse.builder()
+                .id(42L)
+                .firstName("Jane")
+                .lastName("Doe")
+                .phone("555-1234")
+                .email("jane@example.com")
+                .createdAt(now)
+                .modifiedAt(now)
+                .build();
     }
 }
